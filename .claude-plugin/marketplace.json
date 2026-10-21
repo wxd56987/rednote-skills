@@ -1,0 +1,12 @@
+{
+  "name": "rednote-skills",
+  "description": "Xiaohongshu (RedNote) creator skills for Claude Code",
+  "owner": { "name": "wxd56987", "url": "https://github.com/wxd56987" },
+  "plugins": [
+    {
+      "name": "rednote-skills",
+      "source": "./",
+      "description": "小红书运营全流程：全屏榜单图、配文、发布、日常互动、卡通头像"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+---
+name: rednote-publish
+description: Publishes a Xiaohongshu/RedNote image note through the creator web platform with browser automation, using the long-article route so 9.6:16 images display full-screen, picking the most-viewed exact-match topics and defaulting to private visibility for review. Use when the user asks to 发布小红书, 发笔记, 发帖, 上传图片到小红书, or to replace images on a published note.
+when_to_use: |
+  - 图片和配文都准备好了，要发到小红书
+  - 用户说「发布」「发笔记」「今日发帖」「把图换掉」「改一下已发布的笔记」
+  - Do NOT use for: 出图（rednote-fullscreen-note）、写配文（rednote-caption-writer）、点赞关注评论（rednote-growth-ops）
+argument-hint: 图片路径（按顺序）和 caption.md 的路径
+---
+
+# 发布小红书图文笔记
+
+在 creator.xiaohongshu.com 上用浏览器自动化发布。**默认发成「仅自己可见」**，用户在 App 里看过再自己改公开。
+
+## 前提
+
+- 有能操作用户浏览器、并能往网页上传本地文件的工具（如 Claude in Chrome 的 `file_upload`）。只能截图、不能上传文件的浏览器工具做不了这一步。
+- 用户已在这个浏览器里登录小红书创作平台。没登录时请用户自己扫码登录，不要代填账号密码。
+- 图片是 9.6:16（如 1300×2160）：必须走「写长文」。「上传图文」会把它塞进 3:4 的框，上下留白。
+- `assets/page-helpers.js` 里的辅助函数要在发布页执行一次（粘贴整段运行）。
+
+## 步骤
+
+1. 打开 `https://creator.xiaohongshu.com/publish/publish?source=official&from=menu&target=article`，点「新的创作」。
+2. **标题**：填 caption 的标题。
+3. **临时正文**：先随便写 ≥100 字（如几个板块的简介），点「一键排版」→ 选默认模板 →「下一步」。等「笔记图片生成中」结束。
+   正文区没接住输入时，先点一下正文区再输入，确认字数统计变了再继续。
+4. **上传图片**：用 `find` 找到图片编辑区的 file input，按顺序上传（01 → 02 → 03）。
+5. **删模板图**：一键排版自动生成的图也在列表里。执行 `__removeImagesNot(1300, 2160)`（参数是你的图的像素尺寸），返回值应只剩你的图。确认右侧预览铺满全宽。
+6. **正文**：点正文编辑区，用键盘输入 caption 正文（不含话题），覆盖临时正文。编辑器是 ProseMirror：坐标点击不可靠，改字见 `references/editor-gotchas.md`。
+7. **话题**，逐个处理：
+   1. 在正文末尾输入 `#关键词`，等 2 秒出下拉。
+   2. 执行 `__pickTopic('关键词')`，返回 `ok: true` 才算选上。
+   3. 返回 `ok: false` 时把候选列给用户，不要选「新建话题」。
+   - 最多 10 个。插入后是「#xxx[话题]#」节点；删某个话题要把光标放到该节点后面按 Backspace。
+8. **核对**：执行 `__checkDraft()`。确认四点：图片数量、尺寸和顺序；话题数量 ≤ 10；正文结尾正确；没有残留的临时正文。
+9. **可见范围**：「更多设置」→ 可见范围选 **仅自己可见**，截图确认。
+10. 点「发布」，看到「发布成功」。
+11. **验收**：打开「笔记管理」，确认这篇显示「审核中」，封面上有「仅自己可见」标记。关掉自己开的标签页。
+12. 告诉用户已发成仅自己可见，请用户在 App 里验收后自己改公开。
+
+## 修改已发布的笔记
+
+1. 笔记管理里悬停卡片 → 铅笔图标 → 修改。
+2. **换图**：
+   1. 先往图片 input 追加新图（新图排在旧图后面）。
+   2. 再删旧图：逐个点第一张的 `.close-btn`（用 JavaScript 点，不要用坐标）。每删一张都核对剩下的是新图（新上传的 `img.src` 以 `blob:` 开头）。
+3. 点「发布」，提示「更新成功」。之后会短暂显示「审核中」，浏览数会保留。
+
+## 边界
+
+- **改公开、删除笔记都由用户自己做。** 用户在当前对话里明确要求某一篇直接公开发布时，才把可见范围设成公开。
+- 发布前有任何一项核对不过（图不对、话题超 10 个、正文残缺），先停下告诉用户，不要硬发。
+- 不改账号设置、不回复私信、不点页面上的活动或推广入口。

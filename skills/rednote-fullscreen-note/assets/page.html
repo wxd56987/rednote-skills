@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>RedNote 全屏榜单图</title>
+<!--
+  scripts/render.mjs 用无头 Chrome 打开本页，调用 renderPage(DATA, i) 排第 i 页，再截图。
+  版式（杂志风）：左上栏目名 + 页码，左对齐衬线大标题（高亮段用荧光笔底纹）+ 副标题，
+  一张白色大卡片里分行列出条目（圆形序号 / 名称 + 描边标签 / 说明 / 来源 / 右侧数值块），页脚账号名。
+  每页自动取放得下的最大字号（系数 0.8–1.3），余量先加到行距，再整体垂直居中。
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; overflow: hidden; }
+  #page {
+    position: relative; overflow: hidden; isolation: isolate;
+    display: flex; flex-direction: column; align-items: stretch;
+    font-family: 'Noto Sans SC'; color: #1D1B26;
+    -webkit-font-smoothing: antialiased;
+    font-kerning: normal;
+    /* 不做中西文自动加空格、也不压缩相邻标点（排版结果可预期） */
+    text-autospace: no-autospace;
+    text-spacing-trim: space-all;
+  }
+  #page > * { flex: none; }
+  .row { display: flex; flex-direction: row; }
+  .col { display: flex; flex-direction: column; }
+  .row > *, .col > * { flex: none; }
+  .t { white-space: pre; }
+  .t.wrap { white-space: pre-wrap; overflow-wrap: normal; }
+  #measure { position: absolute; left: 0; top: 0; visibility: hidden; }
+</style>
+</head>
+<body>
+<div id="page"></div>
+<script>
+// 字体走 Google Fonts（fonts.googleapis.com / fonts.gstatic.com，只下载字体）。Noto Sans SC 统一按「上沿 1.0em、下沿 0.235em」排
+// （Chrome 默认读 hhea 的 1.16 / 0.288，文字会整体偏下、行高偏高），用 ascent/descent-override 改写，
+// 所以样式表要取回来改写后再插入，不能直接 <link>。
+const FONT_CSS = 'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@900&family=Space+Grotesk:wght@700&display=block';
+const NOTO_METRICS = { 500: [97.5, 21], other: [100, 23.5] }; // [上沿%, 下沿%]，Medium 略矮
+const fontCss = fetch(FONT_CSS).catch((e) => { throw new Error('取不到 Google Fonts 样式表（需要联网）：' + e.message); }).then((r) => { if (!r.ok) throw new Error('Google Fonts 返回 ' + r.status); return r.text(); }).then((css) => {
+  const st = document.createElement('style');
+  st.textContent = css.replace(/@font-face\s*{[^}]*}/g, (rule) => {
+    if (!rule.includes("'Noto Sans SC'")) return rule;
+    const [a, d] = NOTO_METRICS[(rule.match(/font-weight:\s*(\d+)/) || [])[1]] || NOTO_METRICS.other;
+    return rule.replace('}', `  ascent-override: ${a}%; descent-override: ${d}%; line-gap-override: 0%;\n}`);
+  });
+  document.head.appendChild(st);
+});
+
+const FAMILY = { 'Noto Sans SC': "'Noto Sans SC'", 'Noto Serif SC': "'Noto Serif SC', 'Noto Sans SC'", 'Space Grotesk': "'Space Grotesk', 'Noto Sans SC'" };
+const WEIGHT = { Regular: 400, Medium: 500, Bold: 700, Black: 900 };
+// 西文字体里没有的字形（中文、全角标点、部分符号）统一回落到 Noto Sans SC
+const CJK = /[⺀-鿿　-〿＀-￯‘-‟·≤≥≈~<>×→Σ≠]+/g;
+
+// 默认配色：每页按强调色换一种浅底（paper 设了就统一用它），白色大卡片 + 柔和投影。数据里的 theme / accents 可以覆盖。
+const LT0 = { paper: '', sheet: '#FFFFFF', ink: '#1D1B26', body: '#3A3845', muted: '#77748A', line: '#ECEAF2' };
+// 强调色在白卡上对比度都 ≥ 4.5:1；自定义时也保持这个下限，否则序号和数值发灰
+const AC0 = { red: '#D9455F', purple: '#7C4DDB', blue: '#2563EB', green: '#0F8F6B' };
+const BG0 = { red: '#FFF0EE', purple: '#F3EEFF', blue: '#ECF2FF', green: '#E9F6F0' };
+let LT = LT0, LIST_AC = AC0;
+
+let K = 1;
+const u = (v) => Math.max(1, Math.round(v * K));
+const pad2 = (n) => String(n).padStart(2, '0');
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function el(cls, parent) {
+  const e = document.createElement('div');
+  if (cls) e.className = cls;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const box = (e) => e.getBoundingClientRect();
+
+// o.width 有值时固定宽度、自动换行，否则单行自适应宽度
+function txt(str, o, parent) {
+  const e = el('t', parent);
+  const size = o.size;
+  e.style.fontFamily = FAMILY[o.font || 'Noto Sans SC'];
+  e.style.fontWeight = WEIGHT[o.style || 'Regular'];
+  e.style.fontSize = size + 'px';
+  e.style.color = o.color || LT.ink;
+  e.style.lineHeight = o.lhPx ? o.lhPx + 'px' : o.lh ? (size * o.lh / 100) + 'px' : 'normal';
+  if (o.ls) e.style.letterSpacing = (o.ls / 100) + 'em';
+  if (o.align) e.style.textAlign = o.align.toLowerCase();
+  if (o.width) { e.classList.add('wrap'); e.style.width = o.width + 'px'; }
+  if (o.html !== undefined) e.innerHTML = o.html;
+  else if (o.mix) e.innerHTML = mixHtml(String(str), o.mix);
+  else e.textContent = String(str);
+  return e;
+}
+// 中文等字形改用 Noto Sans SC；行高设 0，避免两种字体的上下沿把行撑高
+function mixHtml(s, style) {
+  return esc(s).replace(CJK, (m) => `<span style="font-family:'Noto Sans SC';font-weight:${WEIGHT[style]};line-height:0">${m}</span>`);
+}
+// 支持 **加粗** 标记
+function richHtml(str, emColor) {
+  return String(str).split('**').map((piece, i) => (i % 2 && piece) ? `<b style="font-weight:700;color:${emColor}">${esc(piece)}</b>` : esc(piece)).join('');
+}
+function lineCount(e, lhPx) { return Math.round(box(e).height / lhPx); }
+// 最后一行只剩一两个字时先收紧字距（-1% ~ -3%）；不收窄文本框（会拆词、让各行的列错位）
+function fixOrphan(e, w, lhPx, fs) {
+  const L = lineCount(e, lhPx);
+  if (L < 2) return;
+  e.style.width = 'max-content'; e.classList.remove('wrap');
+  const natural = box(e).width;
+  e.style.width = w + 'px'; e.classList.add('wrap');
+  if (natural - (L - 1) * w > fs * 2.6) return;
+  for (const v of [-1, -2, -3]) { e.style.letterSpacing = (v / 100) + 'em'; if (lineCount(e, lhPx) < L) return; }
+  e.style.letterSpacing = '';
+}
+function richTxt(str, o, emColor, parent) {
+  const e = txt('', Object.assign({}, o, { html: richHtml(str, emColor) }), parent);
+  fixOrphan(e, o.width, o.lhPx, o.size);
+  return e;
+}
+function shrinkTo(e, maxW, minSize) {
+  let s = parseFloat(e.style.fontSize);
+  while (box(e).width > maxW && s > minSize) { s -= 1; e.style.fontSize = s + 'px'; if (e.dataset.lh) e.style.lineHeight = (s * e.dataset.lh / 100) + 'px'; }
+  return e;
+}
+
+const PADX = 72, SHEET_PX = 44, ROW_PY = 30;
+function listPage(DATA, spec, k, page, idx) {
+  K = k;
+  const W = (DATA.size && DATA.size[0]) || 1300, H = (DATA.size && DATA.size[1]) || 2160;
+  const LW = W - PADX * 2;
+  const key = spec.accent || 'red';
+  const ac = LIST_AC[key] || LIST_AC.red;
+  page.innerHTML = '';
+  Object.assign(page.style, { width: W + 'px', height: H + 'px', padding: `84px ${PADX}px 0`, background: LT.paper || BG0[key] || BG0.red });
+  const measure = el('', page); measure.id = 'measure';
+
+  // 右上角一块淡色圆形，只做氛围
+  const blob = el('', page);
+  Object.assign(blob.style, { position: 'absolute', right: '-260px', top: '-300px', width: '820px', height: '820px', borderRadius: '50%', background: ac, opacity: '0.09', zIndex: '-1' });
+
+  const top = el('row', page);
+  Object.assign(top.style, { justifyContent: 'space-between', alignItems: 'center' });
+  const lab = el('row', top);
+  Object.assign(lab.style, { gap: '14px', alignItems: 'center' });
+  const dot = el('', lab);
+  Object.assign(dot.style, { width: '16px', height: '16px', borderRadius: '50%', background: ac });
+  txt(spec.pill || DATA.pill, { style: 'Bold', size: 30, color: LT.muted }, lab);
+  txt(`${pad2(idx + 1)} / ${pad2(DATA.pages.length)}`, { font: 'Space Grotesk', style: 'Bold', size: 30, color: LT.muted }, top);
+
+  const tw = el('col', page);
+  Object.assign(tw.style, { paddingTop: '40px', alignItems: 'flex-start' });
+  const mark = `background:linear-gradient(transparent 62%, ${ac}38 62%, ${ac}38 92%, transparent 92%)`;
+  const ttl = txt('', { font: 'Noto Serif SC', style: 'Black', size: 104, color: LT.ink, lh: 122, html: esc(spec.title) + (spec.hl ? `<span style="${mark}">${esc(spec.hl)}</span>` : '') }, tw);
+  ttl.dataset.lh = 122;
+  shrinkTo(ttl, LW, 64);
+  if (spec.sub) {
+    const sw = el('col', page);
+    Object.assign(sw.style, { paddingTop: '14px', alignItems: 'flex-start' });
+    txt(spec.sub, { style: 'Medium', size: 34, color: LT.muted }, sw);
+  }
+
+  // area 撑满剩余高度，用来量余量；sheet 是真正的白卡，高度随内容
+  const area = el('col', page);
+  Object.assign(area.style, { flex: '1 1 0', minHeight: '0', paddingTop: '48px', paddingBottom: '16px' });
+  const sheet = el('col', area);
+  Object.assign(sheet.style, { background: LT.sheet, borderRadius: '44px', padding: `${u(10)}px ${SHEET_PX}px`, boxShadow: '0 28px 70px rgba(29,27,38,0.10), 0 2px 8px rgba(29,27,38,0.05)' });
+
+  // 先做右侧数值块，取最宽的一个作为整页统一列宽，保证中间文字列对齐
+  const metrics = spec.items.map((it) => {
+    const m = el('col', measure);
+    Object.assign(m.style, { gap: '4px', alignItems: 'center', padding: `${u(14)}px ${u(20)}px`, borderRadius: '22px', background: ac + '14' });
+    txt(it.v, { font: 'Space Grotesk', style: 'Bold', size: u(48), color: ac, lh: 105, mix: 'Black', align: 'CENTER' }, m);
+    if (it.l) txt(it.l, { style: 'Medium', size: u(23), color: LT.muted, align: 'CENTER' }, m);
+    return m;
+  });
+  const mW = Math.max(u(160), ...metrics.map((m) => Math.ceil(box(m).width)));
+  const badge = u(72), gap = u(28);
+  const mainW = LW - SHEET_PX * 2 - badge - gap * 2 - mW;
+  let maxOver = 0;
+  const rows = spec.items.map((it, i) => {
+    const row = el('row', sheet);
+    Object.assign(row.style, { gap: gap + 'px', alignItems: 'center', padding: `${u(ROW_PY)}px 0`, borderTop: i ? `2px solid ${LT.line}` : 'none' });
+    const b = el('row', row);
+    Object.assign(b.style, { width: badge + 'px', height: badge + 'px', borderRadius: '50%', background: ac, justifyContent: 'center', alignItems: 'center' });
+    txt(pad2(i + 1), { font: 'Space Grotesk', style: 'Bold', size: u(32), color: '#fff', lh: 100 }, b);
+    const main = el('col', row);
+    Object.assign(main.style, { width: mainW + 'px', gap: u(8) + 'px', alignItems: 'flex-start' });
+    const tr = el('row', main);
+    Object.assign(tr.style, { gap: '14px', alignItems: 'center' });
+    const h3 = txt(it.t, { style: 'Black', size: u(42), color: LT.ink, lh: 125 }, tr);
+    h3.dataset.lh = 125;
+    let tagW = 0;
+    if (it.tag) {
+      const chip = el('row', tr);
+      Object.assign(chip.style, { padding: `${u(5)}px ${u(14)}px`, borderRadius: '999px', boxShadow: `inset 0 0 0 2px ${ac}` });
+      txt(it.tag, { style: 'Bold', size: u(24), color: ac, lh: 100 }, chip);
+      tagW = box(chip).width + 14;
+    }
+    const room = mainW - tagW;
+    maxOver = Math.max(maxOver, box(h3).width / room);
+    shrinkTo(h3, room, u(30));
+    if (it.d) richTxt(it.d, { size: u(29), color: LT.body, lhPx: Math.round(u(29) * 1.5), width: mainW }, LT.ink, main);
+    if (it.s) richTxt(it.s, { size: u(25), color: LT.muted, lhPx: Math.round(u(25) * 1.45), width: mainW }, ac, main);
+    const m = metrics[i];
+    row.appendChild(m);
+    m.style.width = mW + 'px';
+    return row;
+  });
+  measure.remove();
+
+  const ft = el('row', page);
+  Object.assign(ft.style, { justifyContent: 'space-between', alignItems: 'center', padding: '26px 0 54px' });
+  const left = el('row', ft);
+  Object.assign(left.style, { gap: '14px', alignItems: 'center' });
+  txt(DATA.brand.id, { font: 'Space Grotesk', style: 'Bold', size: 30, color: LT.ink }, left);
+  txt(spec.note || DATA.footer.note, { style: 'Medium', size: 26, color: LT.muted }, left);
+  txt(spec.next || DATA.footer.next, { style: 'Bold', size: 26, color: ac }, ft);
+  return { area, sheet, rows, maxOver };
+}
+
+function slackOf(r) {
+  const cs = getComputedStyle(r.area);
+  return box(r.area).height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - box(r.sheet).height;
+}
+// 二分查找满足 ok(k) 的最大 k
+function searchK(ok, lo, hi) {
+  if (!ok(lo)) return { k: lo, fits: false };
+  for (let i = 0; i < 7; i++) { const mid = (lo + hi) / 2; if (ok(mid)) lo = mid; else hi = mid; }
+  return { k: Math.floor(lo * 100) / 100, fits: true };
+}
+async function fontsReady() {
+  await fontCss;
+  document.body.offsetHeight;
+  await document.fonts.ready;
+  const fams = new Set();
+  document.fonts.forEach((f) => { if (f.status === 'loaded') fams.add(f.family.replace(/['"]/g, '')); });
+  const missing = ['Noto Sans SC', 'Noto Serif SC', 'Space Grotesk'].filter((f) => !fams.has(f));
+  if (missing.length) throw new Error('字体没加载上：' + missing.join('、') + '（需要能访问 Google Fonts）');
+}
+
+window.renderPage = async (DATA, idx) => {
+  const spec = DATA.pages[idx];
+  const page = document.getElementById('page');
+  LT = Object.assign({}, LT0, DATA.theme);
+  LIST_AC = Object.assign({}, AC0, DATA.accents);
+  await fontCss;
+  listPage(DATA, spec, 1, page, idx);
+  await fontsReady();
+  // 字号系数：内容放得下、名字最多压缩 8% 能排进一行，取最大
+  const fit = searchK((k) => { const r = listPage(DATA, spec, k, page, idx); return slackOf(r) >= 0 && r.maxOver <= 1.08; }, 0.8, 1.3);
+  const r = listPage(DATA, spec, fit.k, page, idx);
+  // 余量先加到行与行之间（分隔线保持居中），每处最多加 44px；剩下的让白卡整体垂直居中
+  const n = Math.max(1, r.rows.length - 1);
+  const add = Math.min(44, Math.max(0, slackOf(r)) / n);
+  r.rows.forEach((row, i) => {
+    if (i) row.style.paddingTop = (u(ROW_PY) + add / 2) + 'px';
+    if (i < r.rows.length - 1) row.style.paddingBottom = (u(ROW_PY) + add / 2) + 'px';
+  });
+  const slack = slackOf(r);
+  if (slack > 4) r.area.style.justifyContent = 'center';
+  await fontsReady();
+  await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+  return { name: spec.name, k: fit.k, fits: fit.fits, slack: Math.round(slack) };
+};
+</script>
+</body>
+</html>

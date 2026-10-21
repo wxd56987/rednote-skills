@@ -1,0 +1,10 @@
+{
+  "name": "rednote-skills",
+  "version": "1.0.0",
+  "description": "Xiaohongshu (RedNote) creator skills: full-screen list images, captions, publishing, daily engagement and avatar design.",
+  "author": { "name": "wxd56987", "url": "https://github.com/wxd56987" },
+  "homepage": "https://github.com/wxd56987/rednote-skills",
+  "repository": "https://github.com/wxd56987/rednote-skills",
+  "license": "MIT",
+  "keywords": ["xiaohongshu", "rednote", "小红书", "social-media", "content", "agent-skills"]
+}

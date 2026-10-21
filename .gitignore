@@ -1,0 +1,5 @@
+dist/
+export/
+avatar-export/
+.DS_Store
+node_modules/

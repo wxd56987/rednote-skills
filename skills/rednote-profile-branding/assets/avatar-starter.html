@@ -1,0 +1,117 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&display=block" rel="stylesheet">
+<style>
+/* 小红书卡通头像起稿页。用法：avatar-starter.html?a=avatarA | avatarB | avatarC | preview[&name=账号名&id=小红书号]，窗口尺寸等于素材尺寸。
+   三个现成形象（深色描边 + 浅色底，32px 也认得出）：A 吐舌头的柴犬、B 戴圆眼镜的猫头鹰、C 头顶橘子的卡皮巴拉。
+   改形象：复制一个 ART 条目，改颜色和道具；SVG 坐标系 1080×1080，主体放在中间 80% 的圆里，圆形裁切后才不缺东西。
+   导出：node scripts/export.mjs（每款 1080×1080 + 预览图）。字体走 Google Fonts。 */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#fff;overflow:hidden}
+svg{display:block}
+</style></head>
+<body>
+<div id="root"></div>
+<script>
+const q = new URLSearchParams(location.search);
+const a = q.get('a') || 'avatarA';
+const NAME = q.get('name') || '你的账号名', ID = q.get('id') || 'YourID';
+const INK = '#2B2840', BLUSH = '#FF8A80';
+const O = (w = 14) => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+
+const ART = {
+  // A：吐舌头的柴犬 —— 亲切、活泼，适合生活方式、干货分享类
+  A: { name: '吐舌柴犬', bg: '#FFE9A8', svg: () => {
+    const head = 'M255 520 C255 340 390 255 540 255 C690 255 825 340 825 520 C825 680 700 790 540 790 C380 790 255 680 255 520 Z';
+    return `
+    <path d="M350 1090 C360 900 420 790 540 790 C660 790 720 900 730 1090 Z" fill="#F0913A" ${O()}/>
+    <path d="M458 1090 C465 945 500 875 540 875 C580 875 615 945 622 1090 Z" fill="#FFF3E0"/>
+    <path d="M300 400 L282 170 Q285 140 312 152 L478 280 Z" fill="#F0913A" ${O()}/>
+    <path d="M332 342 L322 212 L425 290 Z" fill="#FFD9B3"/>
+    <path d="M780 400 L798 170 Q795 140 768 152 L602 280 Z" fill="#F0913A" ${O()}/>
+    <path d="M748 342 L758 212 L655 290 Z" fill="#FFD9B3"/>
+    <clipPath id="hA"><path d="${head}"/></clipPath>
+    <path d="${head}" fill="#F0913A"/>
+    <g clip-path="url(#hA)"><path d="M290 610 C320 525 440 515 540 562 C640 515 760 525 790 610 C780 730 665 800 540 800 C415 800 300 730 290 610 Z" fill="#FFF3E0"/></g>
+    <path d="${head}" fill="none" ${O()}/>
+    <ellipse cx="440" cy="398" rx="28" ry="16" fill="#FFF3E0"/><ellipse cx="640" cy="398" rx="28" ry="16" fill="#FFF3E0"/>
+    <ellipse cx="440" cy="470" rx="31" ry="37" fill="${INK}"/><circle cx="429" cy="455" r="11" fill="#fff"/>
+    <ellipse cx="640" cy="470" rx="31" ry="37" fill="${INK}"/><circle cx="629" cy="455" r="11" fill="#fff"/>
+    <ellipse cx="365" cy="568" rx="40" ry="22" fill="${BLUSH}" opacity=".6"/><ellipse cx="715" cy="568" rx="40" ry="22" fill="${BLUSH}" opacity=".6"/>
+    <path d="M505 558 Q540 543 575 558 Q572 590 540 600 Q508 590 505 558 Z" fill="${INK}"/>
+    <path d="M510 628 Q540 735 570 628 Z" fill="#FF8FA3" ${O(10)}/>
+    <path d="M540 600 Q540 630 506 636 M540 600 Q540 630 574 636" fill="none" ${O(11)}/>`;
+  } },
+  // B：戴圆眼镜的猫头鹰 —— 「博学」的经典形象，大眼镜在小尺寸下最醒目，适合知识类
+  B: { name: '眼镜猫头鹰', bg: '#DCE6FF', svg: () => {
+    const body = 'M540 225 C770 225 860 430 860 640 C860 880 710 1030 540 1030 C370 1030 220 880 220 640 C220 430 310 225 540 225 Z';
+    return `
+    <path d="M335 345 L300 165 Q302 148 318 158 L450 265 Z" fill="#E8873A" ${O()}/>
+    <path d="M745 345 L780 165 Q778 148 762 158 L630 265 Z" fill="#E8873A" ${O()}/>
+    <clipPath id="bB"><path d="${body}"/></clipPath>
+    <path d="${body}" fill="#E8873A"/>
+    <g clip-path="url(#bB)">
+      <ellipse cx="540" cy="850" rx="215" ry="235" fill="#FFF1DC"/>
+      ${[[470, 770], [570, 770], [520, 835], [620, 835], [420, 835]].map(([x, y]) => `<path d="M${x} ${y} q20 20 40 0" fill="none" stroke="#E8B07A" stroke-width="10" stroke-linecap="round"/>`).join('')}
+      <circle cx="435" cy="480" r="138" fill="#FFF1DC"/><circle cx="645" cy="480" r="138" fill="#FFF1DC"/>
+    </g>
+    <path d="${body}" fill="none" ${O()}/>
+    <path d="M232 600 C170 660 178 820 270 880 C298 800 296 690 232 600 Z" fill="#C4682A" ${O()}/>
+    <path d="M848 600 C910 660 902 820 810 880 C782 800 784 690 848 600 Z" fill="#C4682A" ${O()}/>
+    <line x1="337" y1="468" x2="262" y2="445" ${O(14)}/><line x1="743" y1="468" x2="818" y2="445" ${O(14)}/>
+    <circle cx="435" cy="480" r="100" fill="#fff" ${O(22)}/><circle cx="645" cy="480" r="100" fill="#fff" ${O(22)}/>
+    <path d="M532 468 Q540 450 548 468" fill="none" ${O(14)}/>
+    <circle cx="450" cy="490" r="46" fill="${INK}"/><circle cx="432" cy="470" r="15" fill="#fff"/>
+    <circle cx="660" cy="490" r="46" fill="${INK}"/><circle cx="642" cy="470" r="15" fill="#fff"/>
+    <ellipse cx="330" cy="612" rx="36" ry="20" fill="${BLUSH}" opacity=".55"/><ellipse cx="750" cy="612" rx="36" ry="20" fill="${BLUSH}" opacity=".55"/>
+    <path d="M540 560 L582 598 L540 655 L498 598 Z" fill="#F9C74F" ${O(14)}/>`;
+  } },
+  // C：头顶橘子的卡皮巴拉 —— 小红书上很火的「情绪稳定」梗，宽扁的脸 + 眯眯眼 + 深色鼻头（脸太长、口鼻太浅会像牛）
+  C: { name: '卡皮巴拉', bg: '#DDF2E4', svg: () => {
+    const head = 'M262 410 C262 305 360 275 540 275 C720 275 818 305 818 410 L824 715 C824 830 722 885 540 885 C358 885 256 830 256 715 Z';
+    return `
+    <path d="M292 840 C276 950 268 1030 265 1090 L815 1090 C812 1030 804 950 788 840 Z" fill="#B9824F" ${O()}/>
+    <ellipse cx="318" cy="305" rx="46" ry="38" fill="#8C5A30" ${O()}/><ellipse cx="762" cy="305" rx="46" ry="38" fill="#8C5A30" ${O()}/>
+    <clipPath id="hC"><path d="${head}"/></clipPath>
+    <path d="${head}" fill="#B9824F"/>
+    <g clip-path="url(#hC)"><ellipse cx="540" cy="765" rx="235" ry="150" fill="#9A6537"/></g>
+    <path d="${head}" fill="none" ${O()}/>
+    <path d="M362 478 Q400 506 438 478 Z" fill="${INK}"/><path d="M352 476 Q400 458 448 476" fill="none" ${O(13)}/>
+    <path d="M642 478 Q680 506 718 478 Z" fill="${INK}"/><path d="M632 476 Q680 458 728 476" fill="none" ${O(13)}/>
+    <ellipse cx="350" cy="590" rx="42" ry="24" fill="${BLUSH}" opacity=".6"/><ellipse cx="730" cy="590" rx="42" ry="24" fill="${BLUSH}" opacity=".6"/>
+    <ellipse cx="500" cy="690" rx="13" ry="22" transform="rotate(18 500 690)" fill="${INK}"/><ellipse cx="580" cy="690" rx="13" ry="22" transform="rotate(-18 580 690)" fill="${INK}"/>
+    <path d="M505 778 Q540 798 575 778" fill="none" ${O(11)}/>
+    <circle cx="540" cy="262" r="78" fill="#FF9A1F" ${O(16)}/>
+    <circle cx="515" cy="242" r="14" fill="#FFC069"/>
+    <path d="M548 187 C575 142 630 142 650 162 C620 197 575 202 548 187 Z" fill="#7BD389" ${O(12)}/>
+    <line x1="540" y1="186" x2="540" y2="204" ${O(12)}/>`;
+  } },
+};
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const avatar = (k, size, round) => `<svg viewBox="0 0 1080 1080" width="${size}" height="${size}" style="${round ? 'border-radius:50%' : ''}"><rect width="1080" height="1080" fill="${ART[k].bg}"/>${ART[k].svg()}</svg>`;
+const K = Object.keys(ART);
+const T = Object.fromEntries(K.map((k) => ['avatar' + k, () => avatar(k, 1080)]));
+// 预览：每款裁成圆形（大 / 中 / 小），下面模拟搜索「用户」列表一行（56px）和评论区（32px）—— 头像在这两个尺寸下被看到的次数最多
+T.preview = () => `<div style="width:1200px;padding:46px 50px 50px;background:#fff;font-family:'Noto Sans SC';color:#222">
+  <div style="display:grid;grid-template-columns:repeat(${K.length},1fr);gap:24px">
+    ${K.map((k) => `<div style="display:flex;flex-direction:column;align-items:center;gap:18px">
+      <div style="font-weight:700;font-size:26px">${k} · ${ART[k].name}</div>
+      <div style="border-radius:50%;box-shadow:0 0 0 1px #ddd;overflow:hidden">${avatar(k, 250, true)}</div>
+      <div style="display:flex;gap:16px;align-items:center">${avatar(k, 96, true)}${avatar(k, 48, true)}${avatar(k, 32, true)}</div>
+    </div>`).join('')}
+  </div>
+  <div style="margin-top:44px;display:flex;flex-direction:column;gap:10px;border-top:1px solid #eee;padding-top:26px">
+    ${K.map((k) => `<div style="display:flex;align-items:center;gap:16px;padding:8px 0">
+      ${avatar(k, 56, true)}
+      <div style="line-height:1.45"><div style="font-weight:700;font-size:16px">${esc(NAME)} <span style="font-weight:500;font-size:12px;color:#999;background:#f5f5f5;padding:1px 6px;border-radius:4px">${k}</span></div>
+      <div style="font-weight:500;font-size:13px;color:#999">小红书号：${esc(ID)}</div></div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">${avatar(k, 32, true)}<span style="font-weight:500;font-size:13px;color:#666">这条评论在评论区里的样子…</span></div>
+    </div>`).join('')}
+  </div></div>`;
+
+document.getElementById('root').innerHTML = T[a]();
+const fonts = ['700 26px "Noto Sans SC"', '700 16px "Noto Sans SC"', '500 13px "Noto Sans SC"'];
+Promise.all(fonts.map((f) => document.fonts.load(f, NAME + '小红书号这条评论在评论区里的样子吐舌柴犬眼镜猫头鹰卡皮巴拉'))).then(() => document.fonts.ready).then(() => { document.title = 'ready'; });
+</script>
+</body></html>
