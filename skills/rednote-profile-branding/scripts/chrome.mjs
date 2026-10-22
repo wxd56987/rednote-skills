@@ -78,7 +78,8 @@ export async function withPage({ width, height, url, label }, fn) {
   } finally {
     chrome.proc.kill();
     await new Promise((res) => { if (chrome.proc.exitCode !== null) res(); else chrome.proc.once('exit', res); setTimeout(res, 3000); });
-    rmSync(profile, { recursive: true, force: true });
+    // Chrome 退出后偶尔还在写临时目录，删除失败就重试几次；仍失败也不影响已经生成的图
+    try { rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch {}
   }
 }
 
