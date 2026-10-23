@@ -94,7 +94,7 @@ Details live in each skill's `references/`.
 
 - No secrets or account data. You log in yourself in the browser; the skills never type passwords.
 - **Network:** rendering downloads fonts from Google Fonts; browser actions stay on xiaohongshu.com. Nothing else is sent anywhere.
-- **You approve what goes out:** posts are private by default, and every comment or reply is shown to you before sending. Making notes public and deleting them stay with you.
+- **You approve what goes out:** posts are private by default, and every comment or reply is shown to you before sending, unless you explicitly tell it to post directly, in which case it runs a strict self-check and reports each one. Making notes public and deleting them stay with you.
 - No mass following, fake likes or off-platform funnels.
 
 ## Roadmap & contributing

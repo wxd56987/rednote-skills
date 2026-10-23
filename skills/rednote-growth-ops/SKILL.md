@@ -1,6 +1,6 @@
 ---
 name: rednote-growth-ops
-description: Runs a small, human-paced daily engagement routine for a new Xiaohongshu/RedNote account. It browses notes in the niche, likes a few, follows up to five similar accounts, drafts two or three substantive comments for the user to approve, and logs what peers' best-performing content looks like. Use when the user asks to 做小红书运营, 涨粉, 互动, 浏览点赞, 关注同类博主, 评论, or 养号.
+description: Runs a small, human-paced daily engagement routine for a new Xiaohongshu/RedNote account. It browses notes in the niche, likes a few, follows up to five similar accounts, drafts two or three substantive comments for the user to approve (or, only if the user has explicitly said to skip approval, posts them after a strict self-check), and logs what peers' best-performing content looks like. Use when the user asks to 做小红书运营, 涨粉, 互动, 浏览点赞, 关注同类博主, 评论, or 养号.
 when_to_use: |
   - 用户要每天做一些互动来给新号带流量
   - 用户说「运营一下」「浏览点赞」「关注同类」「去评论」「回复评论」「养号」
@@ -24,8 +24,9 @@ argument-hint: 账号的领域关键词（如「AI资讯」「AI日报」「Clau
 | 浏览 | 5–10 篇 | 打开笔记看完正文和评论区，不是只刷列表 |
 | 点赞 | 3–5 个 | 只点认真看过、确实不错的 |
 | 关注 | ≤ 5 个 | 同领域、近一周在更新、粉丝几十到几千的个人号 |
-| 评论 | 2–3 条 | **原文先给用户确认再发** |
-| 回复自己笔记下的评论 | 全部 | 同样先给用户确认 |
+| 评论 | 2–3 条 | **原文先给用户确认再发**（用户明确授权后改为自检直发，见「授权直发」） |
+| 回复自己笔记下的评论 | 有实质内容的都回 | 同评论 |
+| 评论 + 回复合计 | ≤ 8 条 | 一个作者一天最多评论一条；两条之间至少隔 1 分钟 |
 
 ## 步骤
 
@@ -41,19 +42,32 @@ argument-hint: 账号的领域关键词（如「AI资讯」「AI日报」「Clau
 6. **起草评论**（2–3 条）：
    - 选 24 小时内发布、已经有一些互动的笔记：评论能排在前面，也会被作者看到。
    - 写法见 `references/comment-guide.md`：接住原帖的一个具体点，补一个角度，一两句话。
-   - **把每条原文、发在哪篇（作者、标题、数据）列给用户，确认后再逐条发。** 发完核对评论区出现「刚刚」。
-7. **回复自己的评论**：打开自己笔记的通知和评论，起草回复给用户确认。作者回复是推荐权重很高的互动。
+   - **把每条原文、发在哪篇（作者、标题、数据）列给用户，确认后再逐条发。** 发完核对评论区出现「刚刚」。用户授权直发时，改为按「授权直发」自检后发。
+7. **回复自己的评论**：打开自己笔记的通知和评论，起草回复给用户确认（授权直发时同样自检后发）。作者回复是推荐权重很高的互动。
 8. **记日志**：关注了谁（粉丝数、定位、为什么关注）、评论原文和链接对应的帖子、观察到的规律（如「同类日报普遍 0–20 赞，Skills 合集常有几千赞」）。规律要反馈给内容选题。
+
+## 授权直发（可选）
+
+默认每条评论都要用户确认。只有用户明确说过「不用确认、直接发」，才可以跳过确认，而且只限评论和回复。没人复核了，每条发之前逐项自检，任何一项不过就不发：
+
+1. 事实和数字都能在原帖、原帖评论或可靠来源里找到出处，自己算的倍数、比例验算过；推测写成「看起来」「可能」，不写成结论。
+2. 不涉及政治、地缘、个股 / 投资建议、收入 / 变现 / 定价、站外导流。
+3. 原帖不是争议帖、引战帖，评论区没在吵架。
+4. 同一作者今天没评论过；全天评论 + 回复不超过 8 条。
+5. 读起来像懂行的普通人随口说的，不像广告，也不像 AI 腔。
+
+拿不准就不发，记进日志。发完把每条原文和发在哪篇写进日志，并汇报给用户，方便他们觉得不妥时自己删。
 
 ## 技巧
 
 - 网页版界面结构见 `references/web-ui.md`。作者名和链接常被浏览器工具的隐私过滤挡住，这时用 `find` 或截图读取。
 - 点作者头像会新开标签页。关闭标签页单独做，不要和其它动作放在同一批里，否则后面的动作会失效。
 - 关注按钮用 `button.follow-button`，点之前核对文字是「关注」，避免误点成取消关注。
+- 在通知页回复别人后，马上打开那篇笔记常常看不到自己的回复。刷新一次，再展开「N 条回复」核对。
 
 ## 边界
 
-- 评论、回复、私信都代表账号对外发言：**每条原文都要用户确认**。今天确认过的不代表明天可以自动发。
+- 评论、回复、私信都代表账号对外发言：**默认每条原文都要用户确认**。今天确认过的那几条，不代表明天可以自动发。只有用户明确授权「直接发」，评论和回复才走「授权直发」；私信始终要用户自己决定。
 - 不发「互关」「看我主页」「求关注」、链接、二维码、联系方式，也不复制粘贴同一句评论。
 - 不批量关注、不刷赞、不用多个号互动，不碰任何「涨粉服务」。
 - 取关、删评论、私信都由用户决定。
