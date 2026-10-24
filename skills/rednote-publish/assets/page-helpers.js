@@ -32,7 +32,7 @@ window.__pickTopic = (want) => {
   return { ok: true, picked: pick.name, views: pick.views };
 };
 
-// 3. 发布前核对：图片尺寸和顺序、话题节点、正文结尾、原创声明开关。
+// 3. 发布前核对：图片尺寸和顺序、话题节点、正文结尾、原创声明开关、所选合集。
 window.__checkDraft = () => {
   const pm = document.querySelector('.ProseMirror');
   return {
@@ -40,5 +40,6 @@ window.__checkDraft = () => {
     topics: [...(pm?.querySelectorAll('a') || [])].map((a) => a.textContent.trim()),
     tail: pm?.innerText.slice(-120),
     original: !!document.querySelector('.original-wrapper .d-switch-simulator.checked'),
+    collection: document.querySelector('.collection-plugin-wrapper')?.innerText.trim().split('\n').pop(),
   };
 };
